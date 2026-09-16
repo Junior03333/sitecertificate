@@ -86,6 +86,11 @@
     .form-group {
       margin-bottom: 14px;
     }
+    
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
 
     label {
       display: block;
@@ -112,6 +117,21 @@
     input:focus, select:focus {
       border-color: var(--accent-cyan);
       box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+    }
+
+    .btn-generator {
+      padding: 0 16px;
+      background: rgba(13, 17, 23, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .btn-generator:hover {
+      border-color: var(--accent-cyan);
     }
 
     .btn-submit {
@@ -201,6 +221,12 @@
       border-color: var(--danger);
       color: var(--danger);
     }
+    
+    /* Инструменты управления (Экспорт/Импорт) */
+    .toolbar {
+      display: flex;
+      gap: 8px;
+    }
   </style>
 </head>
 <body>
@@ -229,9 +255,13 @@
           <input type="text" id="title" placeholder="например: GitHub, Kaspi или Рабочий ИИН" required>
         </div>
 
+        <!-- 4. Добавлен генератор паролей -->
         <div class="form-group">
           <label for="secretValue">Секретное значение</label>
-          <input type="password" id="secretValue" placeholder="Введите пароль, номер или код" required>
+          <div class="input-group">
+            <input type="password" id="secretValue" placeholder="Введите пароль, номер или код" required>
+            <button type="button" class="btn-generator" id="btnGenerate" title="Сгенерировать безопасный пароль">🎲</button>
+          </div>
         </div>
 
         <button type="submit" class="btn-submit">+ Сохранить в сейф</button>
@@ -240,9 +270,22 @@
 
     <!-- Список сохраненных данных -->
     <div class="card">
+      
+      <!-- 1. Добавлена строка поиска -->
+      <div class="form-group">
+        <input type="text" id="searchInput" placeholder="Поиск по названию или категории...">
+      </div>
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
         <label>Ваши секреты</label>
-        <span id="counter" style="font-size: 12px; color: var(--text-muted);">0 записей</span>
+        
+        <!-- 3. Добавлены кнопки импорта/экспорта -->
+        <div class="toolbar">
+          <button class="btn-action" id="btnExport" title="Скачать JSON">Экспорт</button>
+          <button class="btn-action" id="btnImportTrigger" title="Загрузить JSON">Импорт</button>
+          <input type="file" id="fileImport" accept=".json" style="display: none;">
+          <span id="counter" style="margin-left: 10px; font-size: 12px; color: var(--text-muted); line-height: 28px;">0 записей</span>
+        </div>
       </div>
 
       <div class="entry-list" id="entryList">
@@ -255,6 +298,7 @@
     const form = document.getElementById('vaultForm');
     const entryList = document.getElementById('entryList');
     const counter = document.getElementById('counter');
+    const searchInput = document.getElementById('searchInput');
 
     // Получение записей из LocalStorage
     function getEntries() {
@@ -267,48 +311,80 @@
       renderEntries();
     }
 
-    // Отрисовка списка
-    function renderEntries() {
-      const entries = getEntries();
+    // Отрисовка списка (с поддержкой фильтрации)
+    function renderEntries(filterText = '') {
+      const allEntries = getEntries();
+      
+      // Логика фильтрации
+      const entries = allEntries.filter(entry => 
+        entry.title.toLowerCase().includes(filterText.toLowerCase()) || 
+        entry.category.toLowerCase().includes(filterText.toLowerCase())
+      );
+
       entryList.innerHTML = '';
       counter.textContent = `${entries.length} записей`;
 
       if (entries.length === 0) {
-        entryList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">Записей пока нет</div>';
+        entryList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">Записей не найдено</div>';
         return;
       }
 
       entries.forEach((entry, index) => {
+        // Находим оригинальный индекс элемента для корректной работы кнопок
+        const originalIndex = allEntries.findIndex(e => e.title === entry.title && e.value === entry.value);
+        
         const item = document.createElement('div');
         item.className = 'entry-item';
         item.innerHTML = `
           <div class="entry-meta">
             <span class="entry-tag">${entry.category}</span>
             <span class="entry-title">${entry.title}</span>
-            <span class="entry-value" id="val-${index}" data-hidden="true">••••••••••••</span>
+            <span class="entry-value" id="val-${originalIndex}" data-hidden="true">••••••••••••</span>
           </div>
           <div class="entry-actions">
-            <button class="btn-action" onclick="toggleVisibility(${index})">Показать</button>
-            <button class="btn-action" onclick="copyValue(${index})">Копия</button>
-            <button class="btn-action delete" onclick="deleteEntry(${index})">✕</button>
+            <button class="btn-action" onclick="toggleVisibility(${originalIndex})">Показать</button>
+            <button class="btn-action" onclick="copyValue(${originalIndex})">Копия</button>
+            <button class="btn-action delete" onclick="deleteEntry(${originalIndex})">✕</button>
           </div>
         `;
         entryList.appendChild(item);
       });
     }
 
-    // Добавление записи
+    // Добавление записи с ВАЛИДАЦИЕЙ
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const category = document.getElementById('category').value;
-      const title = document.getElementById('title').value;
-      const value = document.getElementById('secretValue').value;
+      const title = document.getElementById('title').value.trim();
+      const value = document.getElementById('secretValue').value.trim();
+
+      // 2. Валидация
+      if (category === 'ИИН / Документ') {
+        const iinRegex = /^\\d{12}$/;
+        if (!iinRegex.test(value)) {
+          alert('Ошибка: ИИН должен содержать ровно 12 цифр без пробелов и других символов.');
+          return;
+        }
+      } else if (category === 'Телефон') {
+        // Допускает форматы: +77771234567, 87771234567, и со скобками/пробелами
+        const phoneRegex = /^\\+?[\\d\\s\\-\\(\\)]{10,15}$/;
+        if (!phoneRegex.test(value)) {
+          alert('Ошибка: Введен неверный формат номера телефона.');
+          return;
+        }
+      }
 
       const entries = getEntries();
       entries.push({ category, title, value });
       saveEntries(entries);
 
       form.reset();
+      searchInput.value = ''; // Сброс поиска при добавлении
+    });
+
+    // Обработчик поиска
+    searchInput.addEventListener('input', (e) => {
+      renderEntries(e.target.value);
     });
 
     // Показ / скрытие данных
@@ -334,21 +410,84 @@
 
     // Удаление записи
     window.deleteEntry = function(index) {
-      const entries = getEntries();
-      entries.splice(index, 1);
-      saveEntries(entries);
+      if(confirm('Вы уверены, что хотите удалить эту запись?')) {
+        const entries = getEntries();
+        entries.splice(index, 1);
+        saveEntries(entries);
+        renderEntries(searchInput.value); // Перерисовываем с учетом текущего поиска
+      }
     };
+
+    // Генерация случайного пароля
+    document.getElementById('btnGenerate').addEventListener('click', () => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+~';
+      let password = '';
+      for (let i = 0; i < 16; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      const secretInput = document.getElementById('secretValue');
+      secretInput.value = password;
+      secretInput.type = 'text'; // Временно показываем пароль
+      
+      // Автоматически скрываем через 3 секунды
+      setTimeout(() => {
+        secretInput.type = 'password';
+      }, 3000);
+      
+      // Устанавливаем категорию на "Пароль" по умолчанию
+      document.getElementById('category').value = 'Пароль';
+    });
+
+    // Экспорт в JSON
+    document.getElementById('btnExport').addEventListener('click', () => {
+      const entries = getEntries();
+      if (entries.length === 0) {
+        alert('Сейф пуст. Нечего экспортировать.');
+        return;
+      }
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(entries, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "cybervault_backup.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    });
+
+    // Импорт из JSON
+    document.getElementById('btnImportTrigger').addEventListener('click', () => {
+      document.getElementById('fileImport').click();
+    });
+
+    document.getElementById('fileImport').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const importedData = JSON.parse(event.target.result);
+          if (Array.isArray(importedData)) {
+            // Добавляем импортированные данные к существующим
+            const currentEntries = getEntries();
+            const mergedEntries = [...currentEntries, ...importedData];
+            saveEntries(mergedEntries);
+            alert(`Успешно импортировано ${importedData.length} записей!`);
+          } else {
+            alert('Ошибка: Файл имеет неверный формат (ожидался массив записей).');
+          }
+        } catch (error) {
+          alert('Ошибка при чтении файла. Убедитесь, что это корректный JSON.');
+        }
+      };
+      reader.readAsText(file);
+      // Сброс значения input, чтобы можно было загрузить тот же файл еще раз
+      e.target.value = ''; 
+    });
 
     // Первичная отрисовка
     renderEntries();
-
-    /* ========================================================
-       TODO ДЛЯ ВТОРОГО РАЗРАБОТЧИКА (Партнера по GitHub):
-       1. Добавить строку поиска/фильтрации записей по названию и категории.
-       2. Добавить валидацию (например, проверку ИИН на 12 цифр и маску телефона).
-       3. Добавить кнопку экспорта/импорта записей в формате JSON файла.
-       4. Добавить генератор случайных паролей прямо в форму.
-    ======================================================== */
   </script>
 </body>
 </html>
