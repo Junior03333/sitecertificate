@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberVault — Личные заметки</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --card-bg: rgba(22, 27, 34, 0.85);
+      --accent-cyan: #00f2fe;
+      --accent-purple: #9d4edd;
+      --text-main: #e6edf3;
+      --text-muted: #8b949e;
+      --danger: #ff4757;
+      --border: rgba(255, 255, 255, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+      background-image: 
+        radial-gradient(circle at 10% 10%, rgba(157, 78, 221, 0.15), transparent 40%),
+        radial-gradient(circle at 90% 90%, rgba(0, 242, 254, 0.12), transparent 40%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Декоративная шапка */
+    header {
+      text-align: center;
+      position: relative;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: rgba(0, 242, 254, 0.1);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Карточки с эффектом стекла */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Форма ввода */
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 8px;
+      background: rgba(13, 17, 23, 0.7);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus, select:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    .btn-submit:hover {
+      opacity: 0.9;
+    }
+
+    .btn-submit:active {
+      transform: scale(0.99);
+    }
+
+    /* Список записей */
+    .entry-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .entry-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: rgba(13, 17, 23, 0.5);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+
+    .entry-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .entry-tag {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+    }
+
+    .entry-title {
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .entry-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .entry-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-action {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      color: var(--text-main);
+      border-color: var(--text-muted);
+    }
+
+    .btn-action.delete:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge">Local Secure Storage</div>
+      <h1>CyberVault</h1>
+    </header>
+
+    <!-- Карточка добавления данных -->
+    <div class="card">
+      <form id="vaultForm">
+        <div class="form-group">
+          <label for="category">Тип записи</label>
+          <select id="category">
+            <option value="Пароль">Пароль / Аккаунт</option>
+            <option value="ИИН / Документ">ИИН / Документ</option>
+            <option value="Телефон">Номер телефона</option>
+            <option value="Другое">Заметка / Код</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="title">Название / Сервис</label>
+          <input type="text" id="title" placeholder="например: GitHub, Kaspi или Рабочий ИИН" required>
+        </div>
+
+        <div class="form-group">
+          <label for="secretValue">Секретное значение</label>
+          <input type="password" id="secretValue" placeholder="Введите пароль, номер или код" required>
+        </div>
+
+        <button type="submit" class="btn-submit">+ Сохранить в сейф</button>
+      </form>
+    </div>
+
+    <!-- Список сохраненных данных -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <label>Ваши секреты</label>
+        <span id="counter" style="font-size: 12px; color: var(--text-muted);">0 записей</span>
+      </div>
+
+      <div class="entry-list" id="entryList">
+        <!-- Записи будут добавляться скриптом -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('vaultForm');
+    const entryList = document.getElementById('entryList');
+    const counter = document.getElementById('counter');
+
+    // Получение записей из LocalStorage
+    function getEntries() {
+      return JSON.parse(localStorage.getItem('vault_data') || '[]');
+    }
+
+    // Сохранение записей в LocalStorage
+    function saveEntries(entries) {
+      localStorage.setItem('vault_data', JSON.stringify(entries));
+      renderEntries();
+    }
+
+    // Отрисовка списка
+    function renderEntries() {
+      const entries = getEntries();
+      entryList.innerHTML = '';
+      counter.textContent = `${entries.length} записей`;
+
+      if (entries.length === 0) {
+        entryList.innerHTML = '<div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 10px;">Записей пока нет</div>';
+        return;
+      }
+
+      entries.forEach((entry, index) => {
+        const item = document.createElement('div');
+        item.className = 'entry-item';
+        item.innerHTML = `
+          <div class="entry-meta">
+            <span class="entry-tag">${entry.category}</span>
+            <span class="entry-title">${entry.title}</span>
+            <span class="entry-value" id="val-${index}" data-hidden="true">••••••••••••</span>
+          </div>
+          <div class="entry-actions">
+            <button class="btn-action" onclick="toggleVisibility(${index})">Показать</button>
+            <button class="btn-action" onclick="copyValue(${index})">Копия</button>
+            <button class="btn-action delete" onclick="deleteEntry(${index})">✕</button>
+          </div>
+        `;
+        entryList.appendChild(item);
+      });
+    }
+
+    // Добавление записи
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const category = document.getElementById('category').value;
+      const title = document.getElementById('title').value;
+      const value = document.getElementById('secretValue').value;
+
+      const entries = getEntries();
+      entries.push({ category, title, value });
+      saveEntries(entries);
+
+      form.reset();
+    });
+
+    // Показ / скрытие данных
+    window.toggleVisibility = function(index) {
+      const el = document.getElementById(`val-${index}`);
+      const entries = getEntries();
+      if (el.getAttribute('data-hidden') === 'true') {
+        el.textContent = entries[index].value;
+        el.setAttribute('data-hidden', 'false');
+      } else {
+        el.textContent = '••••••••••••';
+        el.setAttribute('data-hidden', 'true');
+      }
+    };
+
+    // Копирование в буфер обмена
+    window.copyValue = function(index) {
+      const entries = getEntries();
+      navigator.clipboard.writeText(entries[index].value).then(() => {
+        alert('Значение скопировано в буфер обмена!');
+      });
+    };
+
+    // Удаление записи
+    window.deleteEntry = function(index) {
+      const entries = getEntries();
+      entries.splice(index, 1);
+      saveEntries(entries);
+    };
+
+    // Первичная отрисовка
+    renderEntries();
+
+    /* ========================================================
+       TODO ДЛЯ ВТОРОГО РАЗРАБОТЧИКА (Партнера по GitHub):
+       1. Добавить строку поиска/фильтрации записей по названию и категории.
+       2. Добавить валидацию (например, проверку ИИН на 12 цифр и маску телефона).
+       3. Добавить кнопку экспорта/импорта записей в формате JSON файла.
+       4. Добавить генератор случайных паролей прямо в форму.
+    ======================================================== */
+  </script>
+</body>
+</html>
